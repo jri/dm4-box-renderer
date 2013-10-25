@@ -4,9 +4,9 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <name>DeepaMehta 4 Box Renderer</name>
+    <name>DeepaMehta 4 Box Renderer (Canvas)</name>
     <groupId>de.deepamehta</groupId>
-    <artifactId>deepamehta-box-renderer</artifactId>
+    <artifactId>deepamehta-box-renderer-canvas</artifactId>
     <version>4.1.3-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
@@ -37,7 +37,7 @@
                 <configuration>
                     <instructions>
                         <Bundle-Activator>
-                            de.deepamehta.plugins.boxrenderer.BoxRendererPlugin
+                            de.deepamehta.plugins.boxrenderer.canvas.BoxRendererPlugin
                         </Bundle-Activator>
                     </instructions>
                 </configuration>

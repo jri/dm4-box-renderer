@@ -1,16 +1,3 @@
-/* Topic */
-
-#topicmap-panel .topic {
-    padding-top: 2px;
-    padding-bottom: 2px;
-    padding-left: 4px;
-    padding-right: 12px;
-}
-
-#topicmap-panel .topic .mini-icon {
-    position: absolute;
-}
-
 /* Color Dialog */
 
 #color-dialog {

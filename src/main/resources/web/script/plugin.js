@@ -1,4 +1,4 @@
-dm4c.add_plugin("de.deepamehta.boxrenderer", function() {
+dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
 
     var PROP_COLOR = "dm4.boxrenderer.color"
     var PROP_SHAPE = "dm4.boxrenderer.shape"
@@ -86,31 +86,6 @@ dm4c.add_plugin("de.deepamehta.boxrenderer", function() {
 
         // ---
 
-        this.topic_dom = function(topic_view, topic_dom) {
-            topic_dom.css("background-color", topic_view.view_props[PROP_COLOR])
-                .append($("<div>").addClass("topic-label").text(topic_view.label))
-        }
-
-        this.topic_dom_appendix = function(topic_view, topic_dom) {
-            var mini_icon = $("<img>").addClass("mini-icon").attr("src", dm4c.get_type_icon_src(topic_view.type_uri))
-                .mousedown(function(event) {
-                    // ### close_context_menu()
-                    var pos = canvas_view.pos(event)
-                    dm4c.do_select_topic(topic_view.id)
-                    dm4c.topicmap_renderer.begin_association(topic_view.id, pos.x, pos.y)
-                    return false    // avoids the browser from dragging an icon copy
-                })
-            topic_dom.append(mini_icon)
-            mini_icon.width(mini_icon.width() / ICON_SCALE_FACTOR)  // the image height is scaled proportionally
-            position_mini_icon(mini_icon, topic_dom)
-        }
-
-        this.topic_dom_draggable_handle = function(topic_dom, handles) {
-            handles.push($(".topic-label", topic_dom))
-        }
-
-        // ---
-
         /**
          * Adds "x1", "y1", "x2", "y2" properties to the topic view. Click detection relies on this bounding box.
          * Adds "width" and "height" proprietary properties.         Updated on topic update (label or type changed).
@@ -123,7 +98,6 @@ dm4c.add_plugin("de.deepamehta.boxrenderer", function() {
         this.update_topic = function(tv, ctx) {
             update_label_and_icon(tv, ctx)
             update_geometry(tv)
-            update_topic_dom(tv)
         }
 
         this.move_topic = function(tv) {
@@ -189,19 +163,7 @@ dm4c.add_plugin("de.deepamehta.boxrenderer", function() {
             }
         }
 
-        function update_topic_dom(tv) {
-            $(".topic-label", tv.dom).text(tv.label)
-            position_mini_icon($(".mini-icon", tv.dom), tv.dom)
-        }
-
         // ---
-
-        function position_mini_icon(mini_icon, topic_dom) {
-            mini_icon.css({
-                top:  topic_dom.outerHeight() - mini_icon.height() / ICON_OFFSET_FACTOR,
-                left: topic_dom.outerWidth()  - mini_icon.width()  / ICON_OFFSET_FACTOR
-            })
-        }
 
         function detect_topic_via_icon(pos) {
             return canvas_view.iterate_topics(function(tv) {
