@@ -1,9 +1,12 @@
 dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
 
+    var DEFAULT_TOPIC_COLOR = "hsl(210,100%,90%)"   // must match server-side (see BoxRendererPlugin.java)
+                                                    // must match top/left color in color dialog (see below)
+
     var PROP_COLOR = "dm4.boxrenderer.color"
     var PROP_SHAPE = "dm4.boxrenderer.shape"
 
-    var _canvas_view
+    var canvas_view
 
     // === Webclient Listeners ===
 
@@ -35,7 +38,7 @@ dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
 
         function do_open_color_dialog() {
 
-            var current_color = _canvas_view.get_topic(topic.id).view_props[PROP_COLOR]
+            var current_color = canvas_view.get_topic(topic.id).view_props[PROP_COLOR]
             var content = $()
             add_color_row("100%", "90%")
             add_color_row( "80%", "80%")
@@ -58,7 +61,7 @@ dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
                 var color_box = $("<div>").addClass("color-box").css("background-color", color).click(function() {
                     var view_props = {}
                     view_props[PROP_COLOR] = color
-                    _canvas_view.set_view_properties(topic.id, view_props)
+                    canvas_view.set_view_properties(topic.id, view_props)
                     color_dialog.destroy()
                 })
                 if (color == current_color) {
@@ -71,7 +74,7 @@ dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
 
     // ------------------------------------------------------------------------------------------------- Private Classes
 
-    function BoxView(canvas_view) {
+    function BoxView(_canvas_view) {
 
         var BOX_PAD_HORIZ = 16
         var BOX_PAD_VERT = 4
@@ -82,29 +85,36 @@ dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
         var ICON_SCALE_FACTOR = 2
         var ICON_OFFSET_FACTOR = 1.5
 
-        _canvas_view = canvas_view
+        // widen scope
+        canvas_view = _canvas_view
 
-        // ---
+
+
+        // === Hook Implementations ===
 
         /**
          * Adds "x1", "y1", "x2", "y2" properties to the topic view. Click detection relies on this bounding box.
-         * Adds "width" and "height" proprietary properties.         Updated on topic update (label or type changed).
-         * Adds "label_wrapper", "icon_size" proprietary properties. Updated on topic update (label or type changed).
-         * Adds "label_pos", "icon_pos" proprietary properties.      Updated on topic move.
+         * Adds "width" and "height" custom properties.         Updated on topic update (label or type changed).
+         * Adds "label_wrapper", "icon_size" custom properties. Updated on topic update (label or type changed).
+         * Adds "label_pos", "icon_pos" custom properties.      Updated on topic move.
          *
-         * @param   tv      A TopicView object (defined in CanvasView),
-         *                  has "id", "type_uri", "label", "x", "y" properties.
+         * @param   topic_view      A TopicView object.
+         *                          Has "id", "type_uri", "label", "x", "y", "view_props", "dom" properties
+         *                          plus the viewmodel-derived custom properties.
          */
-        this.update_topic = function(tv, ctx) {
-            update_label_and_icon(tv, ctx)
-            update_geometry(tv)
+        this.on_update_topic = function(topic_view, ctx) {
+            sync_label_and_icon(topic_view, ctx)
+            sync_geometry(topic_view)
         }
 
-        this.move_topic = function(tv) {
-            update_geometry(tv)
+        this.on_move_topic = function(topic_view) {
+            sync_geometry(topic_view)
         }
 
-        this.draw_topic = function(tv, ctx) {
+        // ---
+
+        this.draw_topic = function(topic_view, ctx) {
+            var tv = topic_view
             // 1) box
             ctx.fillStyle = tv.view_props[PROP_COLOR]
             ctx.fillRect(tv.x1, tv.y1, tv.width, tv.height)
@@ -127,11 +137,23 @@ dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
             } else {
                 return true     // perform default behavoir
             }
+
+            function detect_topic_via_icon(pos) {
+                return canvas_view.iterate_topics(function(tv) {
+                    if (pos.x >= tv.icon_pos.x && pos.x < tv.icon_pos.x + tv.icon_size.width &&
+                        pos.y >= tv.icon_pos.y && pos.y < tv.icon_pos.y + tv.icon_size.height) {
+                        //
+                        return tv
+                    }
+                })
+            }
         }
 
-        // ---
 
-        function update_label_and_icon(tv, ctx) {
+
+        // === Private Methods ===
+
+        function sync_label_and_icon(tv, ctx) {
             // label
             tv.label_wrapper = new js.TextWrapper(tv.label, dm4c.MAX_TOPIC_LABEL_WIDTH, LABEL_LINE_HEIGHT, ctx)
             var size = tv.label_wrapper.get_size()
@@ -145,7 +167,7 @@ dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
             }
         }
 
-        function update_geometry(tv) {
+        function sync_geometry(tv) {
             // bounding box
             tv.x1 = tv.x - tv.width  / 2,
             tv.y1 = tv.y - tv.height / 2
@@ -162,27 +184,12 @@ dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
                 y: tv.y2 - tv.icon_size.height / ICON_OFFSET_FACTOR
             }
         }
-
-        // ---
-
-        function detect_topic_via_icon(pos) {
-            return canvas_view.iterate_topics(function(tv) {
-                if (pos.x >= tv.icon_pos.x && pos.x < tv.icon_pos.x + tv.icon_size.width &&
-                    pos.y >= tv.icon_pos.y && pos.y < tv.icon_pos.y + tv.icon_size.height) {
-                    //
-                    return tv
-                }
-            })
-        }
     }
 
     function BoxViewmodel() {
 
-        var DEFAULT_COLOR = "hsl(210,100%,90%)"     // must match server-side (see BoxRendererPlugin.java)
-                                                    // must match top/left in color dialog (see below)
-
         this.enrich_view_properties = function(topic, view_props) {
-            view_props[PROP_COLOR] = DEFAULT_COLOR
+            view_props[PROP_COLOR] = DEFAULT_TOPIC_COLOR
             view_props[PROP_SHAPE] = "rectangle"    // not used. Just for illustration purpose.
         }
     }
