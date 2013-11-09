@@ -1,10 +1,16 @@
 dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
 
-    var DEFAULT_TOPIC_COLOR = "hsl(210,100%,90%)"   // must match server-side (see BoxRendererPlugin.java)
-                                                    // must match top/left color in color dialog (see below)
+    var DEFAULT_TOPIC_COLOR = "hsl(210,100%,90%)"   // must match top/left color in color dialog (see below)
+    var BOX_PAD_HORIZ = 16
+    var BOX_PAD_VERT = 4
+    var LABEL_COLOR = "black"
+    var LABEL_OFFSET_X = 4
+    var LABEL_OFFSET_Y = -2
+    var LABEL_LINE_HEIGHT = 19  // in pixel, 19px = 1.2em
+    var ICON_SCALE_FACTOR = 2
+    var ICON_OFFSET_FACTOR = 1.5
 
     var PROP_COLOR = "dm4.boxrenderer.color"
-    var PROP_SHAPE = "dm4.boxrenderer.shape"
 
     var canvas_view
 
@@ -37,8 +43,8 @@ dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
         ]
 
         function do_open_color_dialog() {
-
-            var current_color = canvas_view.get_topic(topic.id).view_props[PROP_COLOR]
+            // Note: topics added to a topicmap while the Box Renderer is not active have no stored color
+            var current_color = canvas_view.get_topic(topic.id).view_props[PROP_COLOR] || DEFAULT_TOPIC_COLOR
             var content = $()
             add_color_row("100%", "90%")
             add_color_row( "80%", "80%")
@@ -52,12 +58,12 @@ dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
 
             function add_color_row(saturation, light) {
                 for (var i = 4; i < 12; i++) {
-                    add_color("hsl(" + [(45 * i + 30) % 360, saturation, light] + ")")
+                    add_color_box("hsl(" + [(45 * i + 30) % 360, saturation, light] + ")")
                 }
                 content = content.add($("<br>").attr("clear", "all"))
             }
 
-            function add_color(color) {
+            function add_color_box(color) {
                 var color_box = $("<div>").addClass("color-box").css("background-color", color).click(function() {
                     var view_props = {}
                     view_props[PROP_COLOR] = color
@@ -75,15 +81,6 @@ dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
     // ------------------------------------------------------------------------------------------------- Private Classes
 
     function BoxView(_canvas_view) {
-
-        var BOX_PAD_HORIZ = 16
-        var BOX_PAD_VERT = 4
-        var LABEL_COLOR = "black"
-        var LABEL_OFFSET_X = 4
-        var LABEL_OFFSET_Y = -2
-        var LABEL_LINE_HEIGHT = 19  // in pixel, 19px = 1.2em
-        var ICON_SCALE_FACTOR = 2
-        var ICON_OFFSET_FACTOR = 1.5
 
         // widen scope
         canvas_view = _canvas_view
@@ -116,7 +113,8 @@ dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
         this.draw_topic = function(topic_view, ctx) {
             var tv = topic_view
             // 1) box
-            ctx.fillStyle = tv.view_props[PROP_COLOR]
+            // Note: topics added to a topicmap while the Box Renderer is not active have no stored color
+            ctx.fillStyle = tv.view_props[PROP_COLOR] || DEFAULT_TOPIC_COLOR
             ctx.fillRect(tv.x1, tv.y1, tv.width, tv.height)
             // 2) label
             ctx.fillStyle = LABEL_COLOR
@@ -190,7 +188,6 @@ dm4c.add_plugin("de.deepamehta.box-renderer-canvas", function() {
 
         this.enrich_view_properties = function(topic, view_props) {
             view_props[PROP_COLOR] = DEFAULT_TOPIC_COLOR
-            view_props[PROP_SHAPE] = "rectangle"    // not used. Just for illustration purpose.
         }
     }
 })
